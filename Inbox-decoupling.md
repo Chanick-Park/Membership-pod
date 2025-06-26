@@ -2,9 +2,11 @@
 import Foundation
 import UIKit
 
+// MARK: - Notification Status
 public enum NotificationStatus {
     case idle
     case refreshInboxRequested
+    case requestNotificationAuthorization
     case event(NotificationEvent)
     case error(Error)
 }
@@ -19,6 +21,9 @@ public struct NotificationEvent {
         case cleanupMessages(onlyExpired: Bool)
         case showAllMessages(includeExpired: Bool)
         case badge(count: Int)
+        case updateUserProperties(attributes: [AnyHashable: Any])
+        case updateUserTags // Infobip.
+        case updateConsent(consents: [AnyHashable: Any])
     }
     public let kind: Kind
     public init(kind: Kind) {
@@ -80,11 +85,23 @@ private func subscribeToNotificationStatus() {
                 case .badge(let count):
                     // Handle badge update/reset
                     self.updateCount(count)
-                }
-            case .idle:
-                break
-            case .error(let error):
-                logger.errorWithDefaultValues(error, "Unexpected Error: \(error.localizedDescription, privacy: .publicLog)")
+                case .updateUserProperties(let attributes):
+                    self.updateUserTargetingTags(.installationAttributeType(attributes: attributes))
+                case .updateConsent(let consents):
+                    let adobeService: AdobeEventServiceProtocol = container.resolve()
+                    let marketing = consents["marketing"] as? Bool ?? false
+                    let collection = consents["collection"] as? Bool ?? false
+                    adobeService.sendConsent(marketingTurnOff: !marketing, collectTurnOff: !collection, responseCallback: { _ in })
+                case .updateUserTags:
+                    // Handle update user tags
+                    self.updateUserTargetingTags(.userTagType)
+                } // end .event type
+                case .requestNotificationAuthorization:
+                    self.requestNotificationAuthorization()
+                case .idle:
+                    break
+                case .error(let error):
+                    logger.errorWithDefaultValues(error, "Unexpected Error: \(error.localizedDescription, privacy: .publicLog)")
             }
         }
         .store(in: &cancellables)
