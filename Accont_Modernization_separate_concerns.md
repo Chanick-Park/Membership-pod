@@ -1,6 +1,6 @@
-# AccountViewModel: Separated Concerns & Architecture Diagram
+# AccountViewModel: Separated Concerns & Mermaid Diagram
 
-This document summarizes the major separated concerns for `AccountViewModel` and visualizes the suggested architecture for the `MyAccount` (Costco-Digital) module after refactoring.
+This document summarizes the separated concerns for `AccountViewModel` and visualizes the suggested architecture for the `MyAccount` module with Mermaid syntax.
 
 ---
 
@@ -18,79 +18,70 @@ This document summarizes the major separated concerns for `AccountViewModel` and
 
 ---
 
-## Suggested Architecture Diagram
+## Suggested Architecture Diagram (Mermaid)
 
-Textual class diagram using PlantUML syntax for clarity and tool compatibility:
+```mermaid
+classDiagram
+    class AccountViewModel {
+        - store
+        - accountSessionSvc
+        - analyticsSvc
+        - notificationDisp
+        - widgetUpdater
+        - preferences
+        - qrCodeManager
+        - tutorialCoordinator
+        + loadAccountMenu()
+        + handleUserStateChange()
+        + getQRcodeImage()
+        + ...
+    }
 
-```plantuml
-@startuml
-class AccountViewModel {
-    - store
-    - accountSessionSvc
-    - analyticsSvc
-    - notificationDisp
-    - widgetUpdater
-    - preferences
-    - qrCodeManager
-    - tutorialCoordinator
-    + loadAccountMenu()
-    + handleUserStateChange()
-    + getQRcodeImage()
-    + ...
-}
-class MenuBuilder <<static utility>>
+    class MenuBuilder {
+        <<static utility>>
+    }
 
-AccountViewModel --> MenuBuilder
+    AccountViewModel --> MenuBuilder : uses
 
-interface AccountSessionServicing
-class AccountSessionService
-AccountViewModel --> AccountSessionServicing
-AccountSessionService ..|> AccountSessionServicing
+    class AccountSessionServicing
+    class AccountSessionService
+    AccountViewModel --> AccountSessionServicing : depends on
+    AccountSessionService ..|> AccountSessionServicing
 
-interface AnalyticsServicing
-class AnalyticsService
-AccountViewModel --> AnalyticsServicing
-AnalyticsService ..|> AnalyticsServicing
+    class AnalyticsServicing
+    class AnalyticsService
+    AccountViewModel --> AnalyticsServicing : depends on
+    AnalyticsService ..|> AnalyticsServicing
 
-interface NotificationDispatching
-class NotificationDispatcher
-AccountViewModel --> NotificationDispatching
-NotificationDispatcher ..|> NotificationDispatching
+    class NotificationDispatching
+    class NotificationDispatcher
+    AccountViewModel --> NotificationDispatching : depends on
+    NotificationDispatcher ..|> NotificationDispatching
 
-interface WidgetUpdating
-class WidgetUpdater
-AccountViewModel --> WidgetUpdating
-WidgetUpdater ..|> WidgetUpdating
+    class WidgetUpdating
+    class WidgetUpdater
+    AccountViewModel --> WidgetUpdating : depends on
+    WidgetUpdater ..|> WidgetUpdating
 
-interface QRCodeManaging
-class QRCodeManager
-AccountViewModel --> QRCodeManaging
-QRCodeManager ..|> QRCodeManaging
+    class QRCodeManaging
+    class QRCodeManager
+    AccountViewModel --> QRCodeManaging : depends on
+    QRCodeManager ..|> QRCodeManaging
 
-interface AccountPreferring
-class AccountPreferences
-AccountViewModel --> AccountPreferring
-AccountPreferences ..|> AccountPreferring
+    class AccountPreferring
+    class AccountPreferences
+    AccountViewModel --> AccountPreferring : depends on
+    AccountPreferences ..|> AccountPreferring
 
-interface TutorialCoordinating
-class AppTutorialCoordinator
-AccountViewModel --> TutorialCoordinating
-AppTutorialCoordinator ..|> TutorialCoordinating
-@enduml
+    class TutorialCoordinating
+    class AppTutorialCoordinator
+    AccountViewModel --> TutorialCoordinating : depends on
+    AppTutorialCoordinator ..|> TutorialCoordinating
 ```
 
 ---
 
-## Diagram Explanation
-
-- **AccountViewModel**: Central orchestrator, exposes UI state and delegates logic to collaborators.
-- **MenuBuilder**: Pure utility (static) for menu transformations.
-- **AccountSessionService**: Handles business/session/logout logic.
-- **QRCodeManager**: Caches and generates QR codes, handles card logic.
-- **AnalyticsService, NotificationDispatcher, WidgetUpdater**: Handle analytics, notifications, and widget updates, respectively.
-- **AccountPreferences**: Abstracts all user/session storage and key-value logic.
-- **AppTutorialCoordinator**: Orchestrates all tutorial display logic.
-
-**All dependencies are injected, and each concern is isolated for testability and maintainability.**
+**How to use:**  
+Copy the Mermaid code block above into a Mermaid-compatible viewer (e.g., [Mermaid Live Editor](https://mermaid.live/)) to visualize the diagram.
 
 ---
