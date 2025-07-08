@@ -133,3 +133,43 @@ classDiagram
     WalletData --> DmcMembershipCardModel : membershipCardNumber
     WalletData --> WalletFeature : features
 ```
+Grouped breakdown
+
+Groups
+
+1. Authentication & Membership
+
+ - Handle logout UI and functionality. Show sign In screen and actions
+ - Handle verify membership scenario and functionality
+2. Membership Experience
+
+ - Create Membership UI happy path
+ - Create DMC half sheet UI
+ - Handle deep linking to DMC from widget
+ - Inactive status for DMC
+3. Navigation & Platform
+
+ - Create a common Navigation to handle web navigation
+ - Replace UIBuilder for iPad support
+4. App Lifecycle & Region
+
+ - Handle region change, app life cycle
+````
+Account Modernization
+├── Authentication & Membership
+│   ├── Handle logout UI and functionality. Show sign In screen and actions
+│   └── Handle verify membership scenario and functionality
+│
+├── Membership Experience
+│   ├── Create Membership UI happy path
+│   ├── Create DMC half sheet UI
+│   ├── Handle deep linking to DMC from widget
+│   └── Inactive status for DMC
+│
+├── Navigation & Platform
+│   ├── Create a common Navigation to handle web navigation
+│   └── Replace UIBuilder for iPad support
+│
+└── App Lifecycle & Region
+    └── Handle region change, app life cycle
+````
