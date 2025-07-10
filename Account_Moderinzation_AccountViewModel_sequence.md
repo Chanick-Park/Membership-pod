@@ -1,4 +1,6 @@
-#### AccountViewModel Sequence Diagram for DMCCard
+#### AccountViewModel Sequence Diagram 
+---
+#### DMCCard flow
 ```mermaid
 sequenceDiagram
     participant UI as User
@@ -68,3 +70,83 @@ sequenceDiagram
     UI->>View: Dismiss alert
     View->>VM: resetDMCExitMessage()
 ```
+---
+#### membershipStatus update flow.
+```mermaid
+sequenceDiagram
+    participant VM as AccountViewModel
+    participant Remote as AccountRemoteDataSource
+    participant Store as Store<CostcoAppState>
+
+    %% 1. On DMC Card Data Load (e.g. after validation or login)
+    VM->>Remote: checkDMCAndUpdateIfNecessary()
+    Remote-->>VM: [dmcList]
+    VM->>VM: saveMembershipStatus(isUserLoggedIn, dmcList)
+    VM->>Store: Update store.state.memberShipStatus
+
+    %% 2. On User Login
+    VM->>Store: UserStateAction.login
+    VM->>VM: saveSharedDMC(isUserLoggedIn: true, dmcList: [])
+    VM->>VM: saveMembershipStatus(isUserLoggedIn: true, dmcList: [])
+    VM->>Store: Update store.state.memberShipStatus
+
+    %% 3. On User Logout
+    VM->>Store: UserStateAction.logout
+    VM->>VM: saveSharedDMC(isUserLoggedIn: false, dmcList: [])
+    VM->>VM: saveMembershipStatus(isUserLoggedIn: false, dmcList: [])
+    VM->>Store: Update store.state.memberShipStatus
+
+    %% 4. On DMC Card Change (e.g. after deleting membership card, revalidation)
+    VM->>Remote: deleteMembershipCard()
+    Remote-->>VM: []
+    VM->>VM: saveMembershipStatus(isUserLoggedIn, [])
+    VM->>Store: Update store.state.memberShipStatus
+```
+#### Explanation:
+
+ - saveMembershipStatus is called after DMC card data changes (validation, delete), on user login/logout, and anytime DMC cards are updated.
+ - Each call updates store.state.memberShipStatus, reflecting the current membership validity.
+ - The diagram tracks these trigger points and their flow in the app.
+---
+#### revalidationDMC call flow
+```mermaid
+sequenceDiagram
+    participant VM as AccountViewModel
+    participant Store as Store<CostcoAppState>
+    participant Remote as AccountRemoteDataSource
+
+    %% 1. On App Life Cycle Change (Foreground)
+    Store->>VM: appLifecycle = .foreground
+    VM->>VM: revalidateDMCs()
+    
+    %% 2. On Region Change
+    Store->>VM: currentRegion changed
+    VM->>VM: revalidateDMCs()
+    
+    %% 3. On AccountView appear
+    View->>VM: .onAppear
+    VM->>VM: revalidateDMCs()
+    
+    %% 4. On Passkey/Card/Sign&Security Tiles Refresh
+    VM->>VM: updatePasskeyRelatedTiles()/updatePasskeyCardMenuItemIfNeeded()/updateSignAndSecurityMenuItemIfNeeded()
+    VM->>VM: revalidateDMCs()
+    
+    %% 5. On User Login/Logout
+    Store->>VM: UserStateAction.login/logout
+    VM->>VM: revalidateDMCs()
+    
+    %% 6. On DMC Validation Needed (menu tap triggers)
+    VM->>VM: checkIfDMCValidationCallNecessary(cellData)
+    alt Validation Needed
+        VM->>VM: revalidateDMCs(skipGlobalValidationCheck: true)
+    end
+```
+#### Explanation:
+This sequence shows all situations where revalidateDMCs() is called in the app:
+
+ - App lifecycle event
+- Region change
+- AccountView appearance
+- Passkey/tile refresh
+- User login/logout
+- DMC validation trigger via menu tap
