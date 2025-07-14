@@ -148,8 +148,22 @@ classDiagram
 ```
 
 ---
+ADO Tickets.
 
-**How to use:**  
-Copy the Mermaid code block above into a Mermaid-compatible viewer (e.g., [Mermaid Live Editor](https://mermaid.live/)) to see the diagram.
-
+1. [User Story 276393: [iOS]Authentication & Membership](https://dev.azure.com/CostcoWholesale/DigAPB/_workitems/edit/276393)
+    - [ ] Handle logout UI and functionality. Show sign In screen and actions
+    - [ ] Handle verify membership scenario and functionality
+2. [User Story 276399: [iOS]Navigation & Platform](https://dev.azure.com/CostcoWholesale/DigAPB/_workitems/edit/276393)
+    - [x] Create Membership UI happy path
+    - [ ] Create DMC half sheet UI
+    - [ ] Handle deep linking to DMC from widget
+    - [ ] Inactive status for DMC
+3. Navigation & Platform (Assem) 
+    - [ ] Create a common Navigation to handle web navigation
+    - [x] Replace UIBuilder for iPad support
+4. [User Story 276405: [iOS]App Lifecycle & Region](https://dev.azure.com/CostcoWholesale/DigAPB/_workitems/edit/276393)
+    * Handle region change, app life cycle
+5. [User Story 276407: [iOS]Separation of Concerns](https://dev.azure.com/CostcoWholesale/DigAPB/_workitems/edit/276393)
+    - [x] QRCode logic
+    - [x] MenuItem logic
 ---
