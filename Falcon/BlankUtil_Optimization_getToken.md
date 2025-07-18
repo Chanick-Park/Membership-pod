@@ -1,4 +1,4 @@
-#### Current `getToken()` sequence Diagram
+#### `getToken()` sequence Diagram
 ```mermaid
 sequenceDiagram
     participant Caller
