@@ -1,4 +1,4 @@
-#### `getToken()` sequence Diagram
+#### `getToken()` sequence Diagram (tokenProvider == .wcs)
 ```mermaid
 sequenceDiagram
     participant Caller
