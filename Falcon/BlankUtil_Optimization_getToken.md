@@ -23,7 +23,41 @@ sequenceDiagram
         AuthenticationManager-->>Caller: AuthenticationResult
     end
 ```
+#### `getToken()` sequence Diagram (tokenProvider == .noknok)
+```mermaid
+sequenceDiagram
+    participant Client (ViewController)
+    participant AuthenticationManager
+    participant NokNokAuthenticator
+    participant CostcoTokenManager
+    participant PasskeyManager
+    participant UserDefault
 
+    Client->>AuthenticationManager: getToken()
+    AuthenticationManager->>NokNokAuthenticator: fetchTokenSilently()
+    NokNokAuthenticator->>CostcoTokenManager: getIdToken()
+    CostcoTokenManager-->>NokNokAuthenticator: idToken or error
+    alt Success
+        NokNokAuthenticator->>UserDefault: set retryCount = 0
+        NokNokAuthenticator-->>AuthenticationManager: AuthenticationResult(token)
+        AuthenticationManager-->>Client: Return token
+    else TokenError (e.g. refreshTokenExpired)
+        NokNokAuthenticator->>NokNokAuthenticator: handleTokenError(error)
+        alt RefreshTokenExpired & NokNok enabled
+            NokNokAuthenticator->>PasskeyManager: authenticateWithPasskey()
+            PasskeyManager-->>NokNokAuthenticator: idToken or error
+            alt Passkey Success
+                NokNokAuthenticator->>UserDefault: set retryCount = 0
+                NokNokAuthenticator-->>AuthenticationManager: AuthenticationResult(token)
+            else Passkey Failure
+                NokNokAuthenticator->>NokNokAuthenticator: handleTokenError(error)
+            end
+        else Other Error
+            NokNokAuthenticator->>UserDefault: increment retryCount
+            NokNokAuthenticator-->>AuthenticationManager: Throw error
+        end
+    end
+```
 # How Often and When is `getToken()` Called?
 
 ## When is it called?
