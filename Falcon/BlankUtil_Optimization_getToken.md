@@ -58,6 +58,38 @@ sequenceDiagram
         end
     end
 ```
+#### `getOIDCWebToken()` sequence Diagram (tokenProvider == .wcs && isOAuthWebLoginProviderEnabled == true)
+```mermaid
+sequenceDiagram
+    participant Client (ViewController)
+    participant AuthenticationManager
+    participant NativeOIDCFlowManager
+    participant OIDCProvider (e.g. NokNok or AzureADB2C)
+    participant CostcoTokenManager
+    participant UserDefault
+
+    Client->>AuthenticationManager: getOIDCWebToken()
+    AuthenticationManager->>NativeOIDCFlowManager: start(jwtToken)
+    NativeOIDCFlowManager->>OIDCProvider: exchangeJWTForWebToken(jwtToken)
+    OIDCProvider-->>NativeOIDCFlowManager: webToken or error
+    alt Success
+        NativeOIDCFlowManager->>CostcoTokenManager: storeWebToken(webToken)
+        NativeOIDCFlowManager->>UserDefault: set retryCount = 0
+        NativeOIDCFlowManager-->>AuthenticationManager: Return webToken
+        AuthenticationManager-->>Client: Return webToken
+    else Failure
+        NativeOIDCFlowManager->>UserDefault: increment retryCount
+        alt MaxRetryCount not reached
+            NativeOIDCFlowManager-->>AuthenticationManager: Throw error
+            AuthenticationManager-->>Client: Show error UI / Retry option
+        else MaxRetryCount reached
+            NativeOIDCFlowManager->>UserDefault: set wcsFallbackKey = true
+            AuthenticationManager->>CostcoTokenManager: tryWCSAuthenticator()
+            CostcoTokenManager-->>AuthenticationManager: Return fallback token or error
+            AuthenticationManager-->>Client: Show fallback UI or token
+        end
+    end
+```
 # How Often and When is `getToken()` Called?
 
 ## When is it called?
