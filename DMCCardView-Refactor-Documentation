@@ -1,0 +1,120 @@
+# DMCCardView Refactor: Detailed Documentation
+
+## Overview
+
+This document provides a comprehensive overview of the refactoring and modularization of the `DMCCardView` and its related view models in the Costco-iOS codebase. The refactor focuses on decoupling UI components, establishing a robust dependency injection mechanism, and maximizing code reuse.
+
+---
+
+## 1. DMCCardView Refactor
+
+### Before Refactor
+- DMCCardView was a monolithic component handling card display, user image, QR code, and header directly.
+- The logic and UI concerns were tightly coupled within a single view and view model.
+- Dependencies were implicitly managed or hardcoded, limiting testability and reusability.
+
+### After Refactor
+- DMCCardView now acts as a composition root, delegating specific UI and logic to dedicated subviews and view models.
+- Dependencies are injected using a View Factory pattern, promoting modularity and testability.
+
+---
+
+## 2. Modular View Models and Views
+
+### a. DMCCardHeaderView & ViewModel
+- **Purpose:** Handles the header portion of the DMC card (e.g., card title, status).
+- **Decoupling:** Extracted from DMCCardView, now has its own view model for independent state management.
+
+### b. DMCCardUserImage & ViewModel
+- **Purpose:** Displays the member/user image on the card.
+- **Reuse:** The same view model is shared with `HalfSheetCardDetails` to maintain a single source of truth for user image state, ensuring consistency between main card display and half-sheet details.
+
+### c. QRCodeView & ViewModel
+- **Purpose:** Responsible for rendering and managing the QR code for member identification.
+- **Reuse:** Shares its view model with `HalfSheetQRCodeView` to maintain consistency and avoid duplicate QR code generation logic.
+
+---
+
+## 3. View Factory and Dependency Injection
+
+### Implementation
+- **View Factory:** A factory class is introduced to construct views and inject the required dependencies (view models, services) into each.
+- **Benefits:**
+  - Simplifies view initialization.
+  - Makes unit testing easier by allowing substitution of mock dependencies.
+  - Centralizes control of dependency graphs.
+
+**Example:**
+```swift
+let headerView = ViewFactory.makeCardHeaderView(viewModel: headerViewModel)
+let userImageView = ViewFactory.makeCardUserImageView(viewModel: userImageViewModel)
+let qrCodeView = ViewFactory.makeQRCodeView(viewModel: qrCodeViewModel)
+```
+
+---
+
+## 4. Half-Sheet Components
+
+### a. DMCHalfSheet
+- **Purpose:** Presents card details or QR code in a modal half-sheet UI, enhancing UX for focused actions (e.g., scanning QR, viewing details).
+
+### b. HalfSheetCardDetails
+- **Purpose:** Shows expanded card details in the half-sheet.
+- **Reuse:** Utilizes the same `DMCCardUserImageViewModel` as the main card to ensure image consistency.
+
+### c. HalfSheetQRCodeView
+- **Purpose:** Displays an enlarged QR code for scanning.
+- **Reuse:** Uses the same `QRCodeViewModel` as the primary card, ensuring the QR code data remains in sync.
+
+---
+
+## 5. Reuse Strategy
+
+- **View Models Shared:**
+  - `DMCCardUserImageViewModel` is shared between `DMCCardView` and `HalfSheetCardDetails`.
+  - `QRCodeViewModel` is shared between `QRCodeView` and `HalfSheetQRCodeView`.
+- **Advantages:**
+  - Ensures state consistency across different parts of the UI.
+  - Reduces duplicate logic and potential bugs.
+  - Simplifies state management and maintenance.
+
+---
+
+## 6. Diagrams
+
+### DMCCardView Composition
+
+```
+DMCCardView
+|-- DMCCardHeaderView (with DMCCardHeaderViewModel)
+|-- DMCCardUserImage (with DMCCardUserImageViewModel)
+|-- QRCodeView (with QRCodeViewModel)
+|-- [ViewFactory handles construction and injection]
+|
+|-- DMCHalfSheet
+    |-- HalfSheetCardDetails (uses DMCCardUserImageViewModel)
+    |-- HalfSheetQRCodeView (uses QRCodeViewModel)
+```
+
+---
+
+## 7. Summary of Benefits
+
+- **Decoupling:** Each subview and view model focuses on a single responsibility.
+- **Reusability:** View models are reused across main card and half-sheet components.
+- **Testability:** Dependency injection via the factory enables easy mocking and isolated unit tests.
+- **Maintainability:** Adding new features or updating individual components is safer and easier.
+
+---
+
+## 8. Migration Notes
+
+- Update all usages to use the View Factory for constructing views.
+- Ensure that half-sheet components receive the correct (shared) view models.
+- Update tests to account for new injection patterns and independent view models.
+
+---
+
+## 9. Conclusion
+
+This refactor lays a scalable foundation for further enhancements in DMC card features, supporting future modular development, code reuse, and robust testing.
