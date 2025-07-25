@@ -6,6 +6,7 @@ This document provides a comprehensive overview of the refactoring and modulariz
 
 ---
 
+
 ## 1. DMCCardView Refactor
 
 ### Before Refactor
