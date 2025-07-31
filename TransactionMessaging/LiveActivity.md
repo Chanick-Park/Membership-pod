@@ -1,4 +1,5 @@
 #### Live Activity Sequence Diagram
+```mermaid
 sequenceDiagram
     participant User as User
     participant App as iOS App
@@ -26,3 +27,4 @@ sequenceDiagram
         Push->>App: Push notification ("delivered")
         App->>ActivityKit: End Live Activity
     end
+````
