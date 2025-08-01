@@ -614,3 +614,218 @@ This installs an after-reduction hook on compositeStore. Inside this block:
 
 7. The **ViewModel** reflects this state change back to the **View**, triggering the UI to update accordingly.
 
+---
+# DMCCardViewState
+
+`DMCCardViewState` represents the state of a single DMC membership card view, encapsulating card data and UI-related properties.
+
+## Properties
+
+| Property                   | Type                   | Description                                            |
+|----------------------------|------------------------|--------------------------------------------------------|
+| `card`                     | `DmcMembershipCardModel?` | The membership card data model (optional).              |
+| `walletState`              | `WalletState`          | Current wallet state associated with the card.         |
+| `newMembershipViewFrame`   | `CGRect?`              | Frame of the membership view, used for layout tracking.|
+| `walletShopCardFrameHeight`| `CGFloat`              | Height of the wallet shop card UI element.              |
+| `currentRegion`            | `String`               | User's current region, affecting localized content.    |
+| `currentLocale`            | `String`               | User's current locale setting.                           |
+
+## Equatable Implementation
+
+Equality is based on comparing `walletState`, `newMembershipViewFrame`, `walletShopCardFrameHeight`, `currentRegion`, and `currentLocale`.  
+The `card` property is intentionally excluded from equality checks.
+
+---
+
+# DMCCardViewState Event Reduction
+
+The `reduce(event:)` method handles incoming `DMCCardViewEvent` cases to update the state accordingly.
+
+## Supported Events (`DMCCardViewEvent`)
+
+| Event                             | Description                                      |
+|----------------------------------|------------------------------------------------|
+| `.setCard(DmcMembershipCardModel)`            | Sets the current membership card data.          |
+| `.setWalletState(WalletState)`                | Updates the wallet state.                        |
+| `.updateMembershipViewFrame(CGRect)`          | Updates the membership view frame for layout.   |
+| `.setWalletShopCardFrameHeight(CGFloat)`     | Sets the height of the wallet shop card UI.     |
+| `.updateRegion(String, String)`                | Updates the region and locale strings.           |
+
+# DMCCardCompositeState
+
+`DMCCardCompositeState` manages the collective state of multiple membership card views, keyed by each card's unique identifier.
+
+## Properties
+
+| Property      | Type                          | Description                                    |
+|---------------|-------------------------------|------------------------------------------------|
+| `cardStates`  | `[String: DMCCardViewState]`  | Dictionary mapping card IDs to their view states. |
+
+## Subscript
+
+Allows convenient access to individual `DMCCardViewState` instances by card ID:
+
+```swift
+subscript(cardId: String) -> DMCCardViewState? {
+    get { cardStates[cardId] }
+    set { cardStates[cardId] = newValue }
+}
+```
+
+## State Reduction
+
+The `reduce(event:)` method updates the composite state based on the received `DMCCardCompositeEvent`.
+
+### Supported Events (`DMCCardCompositeEvent`)
+
+| Event                                                     | Description                                                                                          |
+|-----------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| `.updateCards([DmcMembershipCardModel])`                  | Updates or initializes the card states for the given list of cards. For new cards, initializes a default state and sets the card data via `.setCard`. |
+| `.cardEvent(cardId: String, event: DMCCardViewEvent)`     | Routes a card-specific event to the corresponding `DMCCardViewState` for reduction. If the card ID is not found, no action is taken. |
+| `.reset`                                                  | Clears all card states, resetting the `cardStates` dictionary to empty.                            |
+
+## Overview
+`DMCCardCompositeState` encapsulates the state of all card views, enabling efficient management and updates of individual cards through a unified interface. It supports bulk updates (e.g., when new cards are loaded) and fine-grained updates to specific cards by routing events down to `DMCCardViewState`.
+
+```mermaid
+sequenceDiagram
+    participant View as UI/View
+    participant ViewModel as DMCCardViewModel
+    participant ParentStore as DMCStore<DMCCardCompositeState, DMCCardCompositeEvent>
+
+    View->>ViewModel: User triggers event (e.g., update wallet state)
+    ViewModel->>ParentStore: send(.cardEvent(cardId, event))
+    ParentStore->>ParentStore: reduce event & update DMCCardCompositeState
+    ParentStore->>ViewModel: emit updated DMCCardViewState for cardId
+    ViewModel->>ViewModel: updateState(newCardState)
+    ViewModel->>View: notify UI of state change (e.g., @Published or binding)
+```
+
+This shows the unidirectional data flow:
+
+- The ViewModel sends card-specific events up to the shared parent store.
+
+- The parent store reduces the event and updates its composite state.
+
+- It then publishes the new card state back to the ViewModel via subscription.
+
+- The ViewModel updates its own state and propagates changes to the UI.
+
+
+## Handling `.updateCards` Event in `DMCSharedStore`
+
+## Overview
+
+`DMCSharedStore` manages multiple domain-specific Redux-style stores:
+
+- **`compositeStore`**: Handles high-level root app state (`DMCRootCompositeState`).
+- **`dmcViewStore`**: Manages DMC view-level state (`DMCViewCompositeState`), including card list metadata and UI bindings.
+- **`dmcViewCardStores`**: Manages per-card details (`DMCCardCompositeState`), holding multiple `DMCCardViewState` entries keyed by card ID.
+
+---
+
+## Flow of `.updateCards` Event from `DMCViewEvent` to Individual Card States
+
+### 1. Initialization
+
+`dmcViewCardStores` is initialized with an empty `DMCCardCompositeState` and a reducer function:
+
+```swift
+dmcViewCardStores = DMCStore(
+    initialState: DMCCardCompositeState(),
+    reducer: { state, event in
+        state.reduce(event: event)
+    }
+)
+```
+### 2. Registering After-Dispatch Effect on dmcViewStore
+An asynchronous setAfterDispatchEffect is registered on dmcViewStore to listen for post-reducer events:
+
+```swift
+Task {
+    await self.dmcViewStore.setAfterDispatchEffect { [weak self] event in
+        self?.handleDMCViewCompositeEventEffect(event)
+    }
+}
+```
+### 3. Routing via handleDMCViewCompositeEventEffect
+When .dmcView(.updateCards(cards)) is dispatched to dmcViewStore, it is intercepted and routed:
+
+```swift
+private func handleDMCViewCompositeEventEffect(_ event: DMCViewCompositeEvent) {
+    switch event {
+    case .dmcView(let dmcViewEvent):
+        handleDMCViewEventEffect(dmcViewEvent)
+    case .cardHeight:
+        break
+    }
+}
+```
+### 4. Dispatching to dmcViewCardStores
+Within handleDMCViewEventEffect, the .updateCards event is forwarded to dmcViewCardStores:
+
+```swift
+private func handleDMCViewEventEffect(_ event: DMCViewEvent) {
+    switch event {
+    case .updateCards(let cards):
+        dmcViewCardStores.send(.updateCards(cards))
+    case .reset:
+        dmcViewCardStores.send(.reset)
+    default:
+        break
+    }
+}
+```
+
+### 5. Updating State in DMCCardCompositeState
+The DMCCardCompositeState reducer handles the .updateCards event by:
+
+- Adding any missing card IDs to the dictionary.
+
+- Dispatching a .setCard event to each card’s local state:
+
+```swift
+mutating func reduce(event: DMCCardCompositeEvent) {
+    switch event {
+    case .updateCards(let cards):
+        for card in cards {
+            let cardId = card.memberCardNumber
+            if cardStates[cardId] == nil {
+                cardStates[cardId] = DMCCardViewState()
+            }
+            cardStates[cardId]?.reduce(event: .setCard(card))
+        }
+    // ...
+    }
+}
+```
+
+### Result
+- dmcViewCardStores now contains updated DMCCardViewState objects.
+
+- ViewModels like DMCCardViewModel can subscribe to changes in their associated cardId.
+
+- Any state update is propagated through Combine and SwiftUI bindings to re-render the UI.
+
+```mermaid
+sequenceDiagram
+    participant ViewModel
+    participant DMCViewStore
+    participant DMCSharedStore
+    participant DMCViewCardStores
+    participant DMCCardCompositeState
+    participant DMCCardViewState
+
+    ViewModel->>DMCViewStore: send(.dmcView(.updateCards(cards)))
+    DMCViewStore-->>DMCSharedStore: setAfterDispatchEffect triggers
+    DMCSharedStore->>DMCSharedStore: handleDMCViewCompositeEventEffect
+    DMCSharedStore->>DMCSharedStore: handleDMCViewEventEffect(.updateCards)
+    DMCSharedStore->>DMCViewCardStores: send(.updateCards(cards))
+    DMCViewCardStores->>DMCCardCompositeState: reduce(.updateCards)
+    loop for each card
+        DMCCardCompositeState->>DMCCardViewState: reduce(.setCard(card))
+    end
+    DMCCardCompositeState-->>ViewModel: emits new state via publisher
+    ViewModel->>UI: re-render with updated card state
+```
+
