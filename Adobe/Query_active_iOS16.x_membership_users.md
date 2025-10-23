@@ -56,3 +56,5 @@ FROM profile_pairs p
 JOIN ios16_ecids e ON p.ecid = e.ecid
 JOIN active_members a ON a.memberid = p.memberid;
 ```
+
+[AEP Query](https://experience.adobe.com/#/@costco/sname:prod/platform/v2/query/edit/7c907b78-3878-4100-831e-a96652f58d9e)
